@@ -1,0 +1,6 @@
+[submodule "onlineconf"]
+	path = onlineconf
+	url = https://github.com/onlineconf/onlineconf
+[submodule "nginx/lua/onlineconf-lua"]
+	path = nginx/lua/onlineconf-lua
+	url = https://github.com/onlineconf/onlineconf-lua

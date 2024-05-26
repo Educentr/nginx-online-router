@@ -1,0 +1,68 @@
+version: "3.7"
+services:
+  onlineconf-admin:
+    extends:
+      file: ./onlineconf/admin/docker-compose.yml
+      service: onlineconf-admin
+    networks:
+      - admin_default
+    ports:
+      - "8080:80"
+  onlineconf-database:
+    extends:
+      file: ./onlineconf/admin/docker-compose.yml
+      service: onlineconf-database
+    ports:
+      - 3306:3306
+    volumes:
+      - ./oc/admin_nginx_data.sql:/docker-entrypoint-initdb.d/5-example.sql
+    networks:
+      - admin_default
+  onlineconf-updater:
+    extends:
+      file: ./onlineconf/updater/docker-compose.yml
+      service: onlineconf-updater
+    depends_on:
+      - onlineconf-admin
+    volumes:
+      - oc_updater_data:/usr/local/etc/onlineconf
+    environment:
+      ONLINECONF_ADMIN_HOST: onlineconf-admin
+      ONLINECONF_ADMIN_PORT: 80
+      ONLINECONF_UPDATER_USER: nginx
+      ONLINECONF_UPDATER_PASSWORD: password
+  testapp1:
+    build:
+      context: ./testapp
+      dockerfile: ./Dockerfile
+    networks:
+      - apps_network
+  testapp2:
+    build:
+      context: ./testapp
+      dockerfile: ./Dockerfile
+    networks:
+      - apps_network
+  nginx:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    ports:
+      - 8100:8100
+    depends_on:
+      - onlineconf-updater
+      - testapp1
+      - testapp2
+    volumes:
+      - oc_updater_data:/usr/local/etc/onlineconf
+    networks:
+      - apps_network
+networks:
+  apps_network:
+    name: apps_network
+  admin_default:
+    name: admin_default
+volumes:
+  oc_updater_data: {}
+  data: {}
