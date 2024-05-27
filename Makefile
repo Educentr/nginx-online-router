@@ -17,5 +17,9 @@ rm-data-updater:
 rm-data-admin:
 	docker volume rm nginx-online-router_data
 
+.PHONY: rm-data-updater
+rm-data-updater:
+	docker volume rm nginx-online-router_oc_updater_data
+
 .PHONY: rm-and-run
-rm-and-run: rm-docker rm-data-admin run
+rm-and-run: rm-docker rm-data-admin rm-data-updater run
