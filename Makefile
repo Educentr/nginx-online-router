@@ -2,6 +2,7 @@
 .PHONY: run
 run: 
 	git submodule init
+	git submodule update
 	docker-compose up --build --exit-code-from nginx 
 	
 .PHONY: rm-docker
