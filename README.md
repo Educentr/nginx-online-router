@@ -5,9 +5,9 @@
 ```
 make run
 ```
-### Delete database data and run
+### rm && run
 ```
-make rm && make rm-data-admin && make run
+make rm && make run
 ```
 ### Dump Database
 ```

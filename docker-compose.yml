@@ -55,9 +55,8 @@ services:
     ports:
       - 8100:8100
     depends_on:
-      - onlineconf-updater
-      - testapp1
-      - testapp2
+      onlineconf-updater:
+        condition: service_healthy
     volumes:
       - oc_updater_data:/usr/local/etc/onlineconf
     networks:

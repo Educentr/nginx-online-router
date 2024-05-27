@@ -4,14 +4,13 @@ run:
 	git submodule init
 	git submodule update
 	docker-compose up --build --exit-code-from nginx 
+
+.PHONY: rm
+rm: rm-docker rm-data-updater rm-data-admin
 	
 .PHONY: rm-docker
 rm-docker: 
 	docker-compose rm --force --stop
-
-.PHONY: rm-data-updater
-rm-data-updater:
-	docker volume rm nginx-online-router_oc_updater_data
 
 .PHONY: rm-data-admin
 rm-data-admin:
@@ -20,6 +19,3 @@ rm-data-admin:
 .PHONY: rm-data-updater
 rm-data-updater:
 	docker volume rm nginx-online-router_oc_updater_data
-
-.PHONY: rm-and-run
-rm-and-run: rm-docker rm-data-admin rm-data-updater run
