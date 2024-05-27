@@ -1,13 +1,27 @@
 # nginx-online-router
 
+## Decription
+This setup of services, including nginx, onlineconf, and a bit of Lua, allows routing requests to either serviceA or serviceB depending on the configuration in onlineconf.
+
+## How to test
+- make run
+- http://localhost/#/nginx/serviceB/endpoints/_api_v1_users update this value (on - serviceB, 0 - serviceA)
+- curl http://localhost:8100/api/v1/users
+- wait (about 10s)
+- profit 
+
+## Links
+http://localhost Onlineconf (admin:admin)
+http://localhost:8100 nginx
+
 ## Commands
 ### Start
 ```
 make run
 ```
-### rm && run
+### clean && run
 ```
-make rm && make run
+make clean && make run
 ```
 ### Dump Database
 ```

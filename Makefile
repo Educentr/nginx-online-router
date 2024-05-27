@@ -5,8 +5,8 @@ run:
 	git submodule update
 	docker-compose up --build --exit-code-from nginx 
 
-.PHONY: rm
-rm: rm-docker rm-data-updater rm-data-admin
+.PHONY: clean 
+clean: rm-docker rm-data-updater rm-data-admin
 	
 .PHONY: rm-docker
 rm-docker: 
