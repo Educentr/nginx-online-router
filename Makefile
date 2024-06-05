@@ -1,16 +1,16 @@
 #Makefile
 .PHONY: run
-run: 
+run:
 	git submodule init
 	git submodule update
-	docker-compose up --build --exit-code-from nginx 
+	docker compose up --build --exit-code-from nginx
 
-.PHONY: clean 
+.PHONY: clean
 clean: rm-docker rm-data-updater rm-data-admin
-	
+
 .PHONY: rm-docker
-rm-docker: 
-	docker-compose rm --force --stop
+rm-docker:
+	docker compose rm --force --stop
 
 .PHONY: rm-data-admin
 rm-data-admin:
