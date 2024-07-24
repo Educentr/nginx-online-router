@@ -1,8 +1,8 @@
 #Makefile
 .PHONY: run
 run:
-	git submodule init
-	git submodule update
+	git submodule update --init --recursive
+	git submodule sync
 	docker compose up --build --exit-code-from nginx
 
 .PHONY: clean
