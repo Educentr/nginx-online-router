@@ -4,6 +4,39 @@ local router = {
 	handler = {},
 }
 
+-- Define the list of allowed strings
+local allowed = {
+	api = true,
+	v1 = true,
+	transfer = true,
+	v2 = true,
+	multitransfer = true,
+	sub_accounts = true,
+	transfers = true,
+	payout = true,
+}
+
+-- Function to replace non-allowed segments with {AnyID}
+local function replace_non_allowed_segments(url)
+	-- Split the URL into segments
+	local segments = {}
+	for segment in url:gmatch("[^/]+") do
+		table.insert(segments, segment)
+	end
+
+	-- Process each segment
+	for i, segment in ipairs(segments) do
+		-- Replace "-" with "_" for comparison
+		local formatted_segment = segment:gsub("-", "_")
+		if not allowed[formatted_segment] then
+			segments[i] = "{AnyID}"
+		end
+	end
+
+	-- Reassemble the URL
+	return "/" .. table.concat(segments, "/")
+end
+
 local function _get_user_id()
 	local headers, err
 	headers, err = ngx.req.get_headers()
@@ -29,6 +62,7 @@ function router.handler.access()
 	end
 
 	local uri = string.gsub(ngx.var.request_uri, "?.*", "")
+	uri = replace_non_allowed_segments(uri)
 	uri = string.gsub(uri, "/", "_")
 	local method = ngx.req.get_method()
 	local config_key = "serviceB.endpoints." .. method .. uri
@@ -40,8 +74,9 @@ function router.handler.access()
 	end
 
 	local user_id, user_err = _get_user_id()
+	local config_value = CONFIG[config_key]
 
-	for percent in string.gmatch(CONFIG[config_key], "[^,]+") do
+	for percent in string.gmatch(config_value, "[^,]+") do
 		local percent_num = tonumber(percent)
 		if percent == "on" then
 			return
