@@ -54,6 +54,8 @@ services:
       dockerfile: ./nginx/Dockerfile
     ports:
       - 8100:8100
+    environment:
+      NOR_NGINX_NAME: serviceB
     depends_on:
       onlineconf-updater:
         condition: service_healthy

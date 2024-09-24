@@ -2,22 +2,60 @@ local ngx = require("ngx")
 
 local router = {
 	handler = {},
+	nginx_name = "",
+	allowed = {},
+	timeout_allowed = 30,
 }
 
--- Define the list of allowed strings
-local allowed = {
-	api = true,
-	v1 = true,
-	transfer = true,
-	v2 = true,
-	multitransfer = true,
-	sub_accounts = true,
-	transfers = true,
-	payout = true,
-}
+function router.handler.init()
+	router.nginx_name = os.getenv("NOR_NGINX_NAME") or "default"
+	-- if not pcall(function()
+	-- 	router.handler.check_allowed()
+	-- end) then
+	-- 	error("no allowed endpoints")
+	-- end
+end
+
+function router.handler.check_allowed()
+	if not CONFIG[router.nginx_name .. ".endpoints.list"] then
+		ngx.log(ngx.ERR, "no allowed endpoints. Add /nginx/{servicename}/endpoints/list in onlineconf")
+		error("no allowed endpoints. Add /nginx/{servicename}/endpoints/list in onlineconf")
+	end
+end
+
+function router.handler.init_allowed()
+	local refresh_timer
+	refresh_timer = function()
+		local list = CONFIG[router.nginx_name .. ".endpoints.list"]
+		ngx.log(ngx.INFO, "allowed endpoints: ", list)
+
+		local result = {}
+		for path in string.gmatch(list, "([^,]+)") do
+			table.insert(result, path)
+		end
+
+		-- Преобразуем таблицу result в таблицу allowed
+		local allowed = {}
+		for _, path in ipairs(result) do
+			-- Разбиваем путь по символу "/"
+			for segment in string.gmatch(path, "[^/]+") do
+				-- Добавляем уникальные сегменты в таблицу allowed, исключая {ID}
+				if segment ~= "{ID}" then
+					allowed[segment] = true
+				end
+			end
+		end
+		router.allowed = allowed
+
+		ngx.log(ngx.INFO, "allowed endpoints: ", allowed)
+
+		ngx.timer.at(router.timeout_allowed, refresh_timer)
+	end
+	refresh_timer()
+end
 
 -- Function to replace non-allowed segments with {AnyID}
-local function replace_non_allowed_segments(url)
+function router.handler.replace_non_allowed_segments(url)
 	-- Split the URL into segments
 	local segments = {}
 	for segment in url:gmatch("[^/]+") do
@@ -28,8 +66,8 @@ local function replace_non_allowed_segments(url)
 	for i, segment in ipairs(segments) do
 		-- Replace "-" with "_" for comparison
 		local formatted_segment = segment:gsub("-", "_")
-		if not allowed[formatted_segment] then
-			segments[i] = "{AnyID}"
+		if not router.allowed[formatted_segment] then
+			segments[i] = "{ID}"
 		end
 	end
 
@@ -53,19 +91,21 @@ local function _get_user_id()
 end
 
 function router.handler.access()
-	if not CONFIG["serviceB.using"] or CONFIG["serviceB.using"] ~= "1" then
+	ngx.log(ngx.INFO, "nginx name ", router.nginx_name)
+
+	if not CONFIG[router.nginx_name .. ".using"] or CONFIG[router.nginx_name .. ".using"] ~= "1" then
 		ngx.exit(418)
 	end
 
-	if CONFIG["serviceB.host"] and CONFIG["serviceB.host"] ~= "" then
-		ngx.var.serviceB_host = CONFIG["serviceB.host"]
+	if CONFIG[router.nginx_name .. ".host"] and CONFIG[router.nginx_name .. ".host"] ~= "" then
+		ngx.var.serviceB_host = CONFIG[router.nginx_name .. ".host"]
 	end
 
 	local uri = string.gsub(ngx.var.request_uri, "?.*", "")
-	uri = replace_non_allowed_segments(uri)
+	uri = router.handler.replace_non_allowed_segments(uri)
 	uri = string.gsub(uri, "/", "_")
 	local method = ngx.req.get_method()
-	local config_key = "serviceB.endpoints." .. method .. uri
+	local config_key = router.nginx_name .. ".endpoints." .. method .. uri
 
 	ngx.log(ngx.INFO, "method ", method, " uri ", uri)
 
@@ -91,8 +131,8 @@ function router.handler.access()
 			end
 		elseif percent == "list" then
 			if
-				CONFIG["serviceB.accounts"]
-				and ngx.re.match(CONFIG["serviceB.accounets"], "(?:^|,)" .. user_id .. "(?:,|$)", "oj")
+				CONFIG[router.nginx_name .. ".accounts"]
+				and ngx.re.match(CONFIG[router.nginx_name .. ".accounets"], "(?:^|,)" .. user_id .. "(?:,|$)", "oj")
 			then
 				return
 			end
