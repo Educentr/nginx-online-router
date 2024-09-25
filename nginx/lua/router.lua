@@ -9,48 +9,47 @@ local router = {
 
 function router.handler.init()
 	router.nginx_name = os.getenv("NOR_NGINX_NAME") or "default"
-	-- if not pcall(function()
-	-- 	router.handler.check_allowed()
-	-- end) then
-	-- 	error("no allowed endpoints")
-	-- end
-end
-
-function router.handler.check_allowed()
-	if not CONFIG[router.nginx_name .. ".endpoints.list"] then
-		ngx.log(ngx.ERR, "no allowed endpoints. Add /nginx/{servicename}/endpoints/list in onlineconf")
-		error("no allowed endpoints. Add /nginx/{servicename}/endpoints/list in onlineconf")
+	if not pcall(function()
+		router.handler.check_allowed()
+	end) then
+		error("no allowed segments. Add /nginx/{servicename}/segments in onlineconf")
 	end
 end
 
 function router.handler.init_allowed()
+	if not pcall(function()
+		router.handler.load_allowed()
+	end) then
+		error("error load allowed segments")
+	end
+end
+
+function router.handler.check_allowed()
+	if not CONFIG[router.nginx_name .. ".segments"] then
+		ngx.log(ngx.ERR, "no allowed segmengs. Add /nginx/{servicename}/segments in onlineconf")
+		error("no allowed segments. Add /nginx/{servicename}/segments in onlineconf")
+	end
+end
+
+function router.handler.load_allowed()
 	local refresh_timer
 	refresh_timer = function()
-		local list = CONFIG[router.nginx_name .. ".endpoints.list"]
-		ngx.log(ngx.INFO, "allowed endpoints: ", list)
+		local list = CONFIG[router.nginx_name .. ".segments"]
+		-- Так сделать не получиться. Будет ошибка, потому что list уже table
+		-- ngx.log(ngx.INFO, "allowed segments: ", list)
 
-		local result = {}
-		for path in string.gmatch(list, "([^,]+)") do
-			table.insert(result, path)
-		end
-
-		-- Преобразуем таблицу result в таблицу allowed
 		local allowed = {}
-		for _, path in ipairs(result) do
-			-- Разбиваем путь по символу "/"
-			for segment in string.gmatch(path, "[^/]+") do
-				-- Добавляем уникальные сегменты в таблицу allowed, исключая {ID}
-				if segment ~= "{ID}" then
-					allowed[segment] = true
-				end
-			end
+		for _, segment in ipairs(list) do
+			allowed[segment] = true
 		end
+
 		router.allowed = allowed
 
-		ngx.log(ngx.INFO, "allowed endpoints: ", allowed)
+		ngx.log(ngx.INFO, "update allowed segments")
 
 		ngx.timer.at(router.timeout_allowed, refresh_timer)
 	end
+
 	refresh_timer()
 end
 
@@ -72,7 +71,7 @@ function router.handler.replace_non_allowed_segments(url)
 	end
 
 	-- Reassemble the URL
-	return "/" .. table.concat(segments, "/")
+	return "_" .. table.concat(segments, "_")
 end
 
 local function _get_user_id()
@@ -103,7 +102,6 @@ function router.handler.access()
 
 	local uri = string.gsub(ngx.var.request_uri, "?.*", "")
 	uri = router.handler.replace_non_allowed_segments(uri)
-	uri = string.gsub(uri, "/", "_")
 	local method = ngx.req.get_method()
 	local config_key = router.nginx_name .. ".endpoints." .. method .. uri
 

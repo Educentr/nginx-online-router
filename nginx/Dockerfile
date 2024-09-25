@@ -1,6 +1,6 @@
 FROM openresty/openresty:1.21.4.1-0-focal
 
-RUN /usr/local/openresty/luajit/bin/luarocks install luaposix
+RUN /usr/local/openresty/luajit/bin/luarocks install luaposix  
 
 RUN mkdir /logs
 
