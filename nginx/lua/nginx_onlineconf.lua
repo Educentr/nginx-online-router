@@ -29,6 +29,7 @@ function nginx_onlineconf.nginx_init_worker()
 	local ok_timer, err_timer = ngx.timer.every(nginx_onlineconf.timeout, refresh_timer)
 	if not ok_timer then
 		ngx.log(ngx.ERR, "Failed to set repeating timer: ", err_timer)
+		error("Failed to set repeating timer: " .. err_timer)
 	end
 end
 

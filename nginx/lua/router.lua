@@ -32,8 +32,7 @@ function router.handler.check_allowed()
 end
 
 function router.handler.load_allowed()
-	local refresh_timer
-	refresh_timer = function()
+	local refresh_timer = function()
 		local list = CONFIG[router.nginx_name .. ".segments"]
 		-- Так сделать не получиться. Будет ошибка, потому что list уже table
 		-- ngx.log(ngx.INFO, "allowed segments: ", list)
@@ -46,11 +45,12 @@ function router.handler.load_allowed()
 		router.allowed = allowed
 
 		ngx.log(ngx.INFO, "update allowed segments")
-
-		ngx.timer.at(router.timeout_allowed, refresh_timer)
 	end
 
-	refresh_timer()
+	local ok_timer, err_timer = ngx.timer.every(router.timeout_allowed, refresh_timer)
+	if not ok_timer then
+		ngx.log(ngx.ERR, "Failed to set repeating timer: ", err_timer)
+	end
 end
 
 -- Function to replace non-allowed segments with {AnyID}
