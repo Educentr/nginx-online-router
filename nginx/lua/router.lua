@@ -10,17 +10,9 @@ local router = {
 function router.handler.init()
 	router.nginx_name = os.getenv("NOR_NGINX_NAME") or "default"
 	if not pcall(function()
-		router.handler.check_allowed()
-	end) then
+				router.handler.check_allowed()
+			end) then
 		error("no allowed segments. Add /nginx/{servicename}/segments in onlineconf")
-	end
-end
-
-function router.handler.init_allowed()
-	if not pcall(function()
-		router.handler.load_allowed()
-	end) then
-		error("error load allowed segments")
 	end
 end
 
@@ -28,6 +20,14 @@ function router.handler.check_allowed()
 	if not CONFIG[router.nginx_name .. ".segments"] then
 		ngx.log(ngx.ERR, "no allowed segmengs. Add /nginx/{servicename}/segments in onlineconf")
 		error("no allowed segments. Add /nginx/{servicename}/segments in onlineconf")
+	end
+end
+
+function router.handler.init_allowed()
+	if not pcall(function()
+				router.handler.load_allowed()
+			end) then
+		error("error load allowed segments")
 	end
 end
 
@@ -46,6 +46,8 @@ function router.handler.load_allowed()
 
 		ngx.log(ngx.INFO, "update allowed segments")
 	end
+
+	refresh_timer()
 
 	local ok_timer, err_timer = ngx.timer.every(router.timeout_allowed, refresh_timer)
 	if not ok_timer then
@@ -114,28 +116,34 @@ function router.handler.access()
 	local user_id, user_err = _get_user_id()
 	local config_value = CONFIG[config_key]
 
-	for percent in string.gmatch(config_value, "[^,]+") do
-		local percent_num = tonumber(percent)
-		if percent == "on" then
-			return
-		end
-		if user_err then
-			ngx.log(ngx.ERR, "error get user_id", err)
+	for value in string.gmatch(config_value, "[^,]+") do
+		if value == "off" then
 			ngx.exit(418)
 		end
+
+		local percent_num = tonumber(value)
+		if value == "on" then
+			return
+		end
+
+		if user_err then
+			ngx.log(ngx.ERR, "error get user_id", user_err)
+			ngx.exit(418)
+		end
+
 		if percent_num and percent_num >= 0 then
 			if (user_id % 100) < percent_num then
 				return
 			end
-		elseif percent == "list" then
+		elseif value == "list" then
 			if
-				CONFIG[router.nginx_name .. ".accounts"]
-				and ngx.re.match(CONFIG[router.nginx_name .. ".accounets"], "(?:^|,)" .. user_id .. "(?:,|$)", "oj")
+					CONFIG[router.nginx_name .. ".accounts"]
+					and ngx.re.match(CONFIG[router.nginx_name .. ".accounts"], "(?:^|,)" .. user_id .. "(?:,|$)", "oj")
 			then
 				return
 			end
 		else
-			ngx.log(ngx.ERR, "error onlineconf param: ", percent)
+			ngx.log(ngx.ERR, "error onlineconf param: ", value)
 		end
 	end
 
